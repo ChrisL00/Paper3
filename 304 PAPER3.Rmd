@@ -1,0 +1,346 @@
+---
+title: "COVID-19 Pandemic Impacts on Australian's Overall Life Satisfaction - A Study on the 2020 Australian General Social Survey"
+author: "Yijun Shen, Chenyu Lin, Wenxuan Li"
+thanks: "Code and data are available at (https://github.com/ChrisL00/Paper3.git)" 
+date: "19/03/2022"
+abstract: "This paper studies the impacts of the COVID-19 pandemic on Australian's overall life satisfaction by comparing the satisfaction scores estimated from the Australian General Social Survey in 2020 and data of the previous years by data visualizations and interpretations with the help of R. We discover that there is a consistent drop in such score among all groups of people in terms of sex, age group, various social and health status. The data also suggests that while people in general still have good faith in their own health and their communities, some groups of people such as non-heterosexual females and people with mental health condition are more vulnerable to the pandemic. We also discuss the survey structure, source of biases, shortcomings and future steps of the study and present an example of an augmented survey that suits the pandemic environment better."
+fontsize: 12pt
+output: pdf_document
+toc: FALSE
+bibliography: references.bib
+---
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(knitr)
+```
+
+# Introduction
+
+```{r, echo=FALSE, message=FALSE}
+# Read data for estimates and standard errors
+satisfac.est <- readxl::read_xlsx("assets/GSS_Table8.xlsx", sheet=2, skip=6)
+names(satisfac.est) <- c("Group", "Males", "Females", "Total", "...5", 
+                         "Males", "Females", "Total", "...9", 
+                         "Males", "Females", "Total")
+satisfac.se <- readxl::read_xlsx("assets/GSS_Table8.xlsx", sheet=3, skip=6)
+names(satisfac.se) <- c("Group", "Males", "Females", "Total", "...5", 
+                         "Males", "Females", "Total", "...9", 
+                         "Males", "Females", "Total")
+```
+
+In recent decades, the COVID-19 pandemic outbreak is one of the most influential global crises ever since the twenty-first century. Due to the rapid spread and relatively deadly symptoms especially during the first year, the strict governmental measures on travel, gathering restrictions, and forced quarantines, people's lifestyles were significantly impacted and had to adapt to a tense atmosphere that they had not thought about before.
+
+As soon as the WHO declared a global pandemic on March 11st, 2020, many regional and national governments around the world had put strict measures such as international travel bans, border closures, and indoor and outdoor gathering restrictions[@I]. Knowing that the sudden outbreak of a global pandemic might hurt household incomes by damaging the labor market and the economy, most governments also exercised stimulus and financial support for necessary citizens, aiming to retain their life standards as much as possible. However, mental stresses that the pandemic brought to families and individuals were still inevitable, which could potentially result in a significant decrease in their life satisfaction levels.
+
+Australia was one of the countries that took quick response to the pandemic, and retained a relatively optimistic records of infections and deaths during the first year of the pandemic. The 2020 daily infection record in Australia reached a top of 553 confirmed cases in August 1st, which reflected the effective restrictions that the government had exercised at the early stage of the pandemic, especially comparing to regions that were critically hit. Hence statistically speaking, the pandemic situation in Australia in 2020 was not too bad, but whether this strong performance translates to people's wellbeing is yet a question to answer.
+
+The Australian General Social Survey is a national surveying routine happens every four year before 2019, but in order to monitor social wellbeing during the pandemic, the government decided to implement it during June to September of 2020. This survey aims to assess the level of residents living conditions and social wellbeing in multiple dimensions, and is widely acknowledged as a national benchmark for these indices. In this paper, we will use an open source data set processed by the Australian Bureau of Statistics that originated from the survey to determine whether there are decreases in life satisfaction levels of Australians in 2020 that are possibly due to the COVID-19 pandemic outbreak.
+
+We will first start by introducing the survey in terms of its objective, target population, geographical coverage, sampling approach, response rates and possible sources of biases. We will also introduce the estimation methods applied to the raw survey data to arrive at the data set we use in this study. The strucuture and variables of the data set will be discussed before visualization and interpretation. Then, according to the patterns exhibited in the visualization figures, along with external references, we will discuss how the COVID-19 pandemic has affected the results to answer our research question. Finally, we will talk about weaknesses and potential next steps for this study. A supplementary survey is also attached in the Appendix as an augmented version of the original survey to address some of the weaknesses.
+
+This report will be processed in R [@G], and analyzed by using packages tidyverse [@A],
+knitr [@H], readxl [@F] and ggplot2 [@E]. The raw data was form the Australian General Social Survey [@C] and the Australian General Social Survey Methodology [@D], and also using the basic information of the pandemic of Australia from the Wikipedia [@B] for the basic background of the report.
+
+\newpage
+
+# Survey and Data
+
+## The Australian General Social Survey
+
+The Australian General Social Survey (AGSS) is an approximately national wide social survey run by the Australian Bureau of Statistics (ABS) once every four years from 2002 to 2014, and then in 2019 and 2020. The 2020 social survey was a reaction to the COVID-19 pandemic to closely monitor wellbeing of citizens in this unprecedented period of time. The survey aims to "provides data on the social characteristics, wellbeing and social experiences of people in Australia," and is divided into questionnaire with each focusing on one specific topic such as life satisfaction, personal stressors, financial stress, and trust. The survey tends to explore residents' opportunities to participate in different social activities, and also asks for their personal opinions and feelings. 
+
+The target population of the survey is all Australian residents ged 15 years and over living in private dwellings except for remote regions such as the Northern Territory. The survey aims to use the sample data to derive aggregate estimates that reflect each topic in a national scale. According to ABS, the exclusion of residents in remote areas is unlikely to impact on national estimates except the Northen Territory which takes up $21\%$ of the national population.
+
+The sampling frame of AGSS is the list of all registered households recorded at the Government of Australia. Within this frame, households are randomly selected in the continent except for remote areas, and one person aged 15 years or over is then randomly selected to complete the survey. This is a form of two-stage probability sampling method using the simple random sampling approach but with a slight alternation in the sampling probability. However, the sample is designed in a way that households in low socio-economic areas are more likely to be sampled to explore relative outcomes of people more vulnerable to socio-economic disadvantage.
+
+In 2020, the survey was run from June to September with a total response rate of $60.5\%$, and the detailed breakdown of responses are in Table 1 below. We see that the total sample size is $8768$ households or individuals. The non-response rate is relatively higher than previous surveys due to the online and telephone formats of the interviews due to the COVID-19 pandemic. The high non-response rate means that the non-response bias is unavoidable in this sample since we may assume that people with stronger opinions are more likely to response. But for a survey with such a large scale, this problem is not easy to resolve, so we can only admit the bias and discuss it as a shortcoming.
+
+```{r, echo=FALSE}
+# Response statistics
+responses <- data.frame(Response_Type=c("Fully Responding", "Refusal", "Non-Response", "Part-Response", "Total Non-Response", "Sample Size"), 
+                  Frequency=c(5304, 79, 3327, 58, 3464, 8768), 
+                  Proportion=c(60.5, 0.9, 37.9, 0.7, 39.5, 100))
+knitr::kable(responses, caption="Distribution of Responses, 2020 Australian GSS")
+```
+
+## Overall Life Satisfaction Questionnaire
+
+The focus of our study is the Overall Life Satisfaction module contained in the AGSS 2020 survey. This questionnaire asks respondents to describe, on a scale from 0 to 10, how satisfied the respondent is with life as a whole these days. The respondent's input to this question is a numerical variable, and this feature gives the respondent opportunity to more precisely measure their answers mentally than a simple yes-or-no question. The questionnaire also contains questions indicating some characteristics and social status of the respondent that can be used to estimate the mean results across different groups. These indicators include immigration status, mental health condition, long-term health condition, disability, and sexual orientation.
+
+## Estimation and Reporting Methods
+
+In order to protect the respondents' privacy, the raw data collected from AGSS is always kept only at the ABS and cannot be assessed for academic or professional purposes. However, the ABS does aggregate the raw data using a weighted method of estimation so that the results can be easily displayed and interpreted. The aggregated estimates are open source and available for downloads at the ABS official website.
+
+The weighting process assigns a weight to reflect how many people or households they represented in the whole population which is based on their probability of being selected in the sample. These individual observation level weight will then be calibrated to align with independent estimates of the in-scope population along with additional information from trusted sources. Finally, the estimated results are formulated into tables with non-identifiable rows for publication.
+
+## Data Definitions
+
+The processed data set we use contains the weighted estimates of the mean score of overall life satisfaction among all Australians except remote areas, on a scale from 0 to 10. This numerical estimate is the only variable we will be examining. The estimates are reported into groups in terms of age, sex, immigration status, mental health condition, long-term health condition, disability, and sexual orientation.
+
+The relative standard error of this mean estimate in percentage is also provided in a separated spreadsheet for us to determine the variability in each estimate. Consider Figure 1 in below, we see that the overall life satisfaction decreased from 7.5 in 2019 to 7.2 in 2020, and the detailed breakdown analyses are presented in the next section.
+
+```{r, echo=FALSE, message=FALSE, fig.height=7.5, fig.fullwidth=TRUE, fig.cap="Mean Overall Life Satisfaction Scores by Year and Sex"}
+# Extract 2014 data for 6 categories
+satisfac.est.2014 <- satisfac.est[3:7, 1:3]
+migrants.2014 <- satisfac.est[9:10, 1:3]
+mental.health.2014 <- satisfac.est[12:13, 1:3]
+lt.health.2014 <- satisfac.est[15:16, 1:3]
+disable.2014 <- satisfac.est[18:19, 1:3]
+sex.orien.2014 <- satisfac.est[21:22, 1:3]
+total.2014 <- satisfac.est[24, 1:4]
+
+# Extract 2019 data for 6 categories
+satisfac.est.2019 <- bind_cols(satisfac.est[3:7, 1], satisfac.est[3:7, 6:7])
+migrants.2019 <- bind_cols(satisfac.est[9:10, 1], satisfac.est[9:10, 6:7])
+mental.health.2019 <- bind_cols(satisfac.est[12:13, 1], satisfac.est[12:13, 6:7])
+lt.health.2019 <- bind_cols(satisfac.est[15:16, 1], satisfac.est[15:16, 6:7])
+disable.2019 <- bind_cols(satisfac.est[18:19, 1], satisfac.est[18:19, 6:7])
+sex.orien.2019 <- bind_cols(satisfac.est[21:22, 1], satisfac.est[21:22, 6:7])
+total.2019 <- bind_cols(satisfac.est[24, 1], satisfac.est[24, 6:8])
+
+# Extract 2020 data for 6 categories
+satisfac.est.2020 <- bind_cols(satisfac.est[3:7, 1], satisfac.est[3:7, 10:11])
+migrants.2020 <- bind_cols(satisfac.est[9:10, 1], satisfac.est[9:10, 10:11])
+mental.health.2020 <- bind_cols(satisfac.est[12:13, 1], satisfac.est[12:13, 10:11])
+lt.health.2020 <- bind_cols(satisfac.est[15:16, 1], satisfac.est[15:16, 10:11])
+disable.2020 <- bind_cols(satisfac.est[18:19, 1], satisfac.est[18:19, 10:11])
+sex.orien.2020 <- bind_cols(satisfac.est[21:22, 1], satisfac.est[21:22, 10:11])
+total.2020 <- bind_cols(satisfac.est[24, 1], satisfac.est[24, 10:12])
+
+# Mean life satisfaction rates in 2014, 2019, 2020 by sex
+total.2014 %>%
+  mutate(Males=as.double(Males)) %>%
+  pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>% # make the table tidy
+  mutate(Year=2014) %>% # record year
+  bind_rows(total.2019 %>% mutate(Males=as.double(Males)) %>% # join other year tables
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2019)) %>%
+  bind_rows(total.2020 %>% mutate(Males=as.double(Males)) %>%
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2020)) %>%
+  mutate(Year=as.factor(Year)) %>% 
+  ggplot(aes(x=Year, y=LS_Rate, fill=Year)) +
+  geom_bar(position='dodge', stat="identity") + # bar chart 
+  geom_text(aes(label=LS_Rate), position=position_dodge(width=0.9),
+            vjust=-0.25, size=3) + # configure bar labels
+  theme(axis.text.x=element_blank()) + # remove x-axis ticks
+  facet_wrap(vars(Sex)) + # by year and sex
+  xlab("Group") + 
+  ylab("Life Satisfaction Rate")
+```
+
+\newpage
+
+# Results
+
+In this section we will discuss observations in the visualized figures of overall life satisfaction scores from the three AGSS survey data in 2014, 2019, and 2020 by sex and other social status as previously mentioned.
+
+First we notice that throughout the three years, people aged 70 and over have kept a very high score of overall life satisfaction (Figure 1). This means that the Australian society has provided the elders with comfortable and safe environment to enjoy their lives. We also do not notice a decreasing in the scores for the elders in 2020, which means their life satisfaction is not impacted by the COVID-19 pandemic at all. On the other hand, young people aged 15 to 24 years is the group that suffered most severe impacts from COVID-19 with an one point drop from 2019 to 2020 for males and 0.6 point drop for females. This is probably because their strong involvements in the community The pandemic restriction policies have prevented them from participating in many social activities, and therefore reduces their level of happiness.
+
+We also look at the relative standard error trend for the three survey years by age groups as in Figure 3. We notice a jump up from the 2014 data to 2019 data, but the 2020 data do not seem to have even larger variability even though non-response records are significantly higher. But in general, the percentage standard errors are pretty small across three groups, which means our sample size is large enough to ensure stable estimates.
+
+In Figure 4, we display the scores by immigrant status and observe that while the scores for both sex drop in 2020, there is no inconsistency between people with different immigrant status. This represents that the government has supplied fair solutions during the COVID-19 pandemic to ensure that both recent migrants or temporary residents, and other permanent residents mostly share the same privilege.
+
+Figure 5 shows that people with mental health conditions have generally lower scores than those who are not throughout the 3 surveys. In fact, they are even more vulnerable to the COVID-19 pandemic in terms of life satisfaction scores as we would expect. We discover that the drop from 2019 to 2020 for both sex ($-0.3$ versus $-0.6$ for females, and $-0.3$ versus $-0.7$ for males) is twice for people with mental health conditions. Hence, it is recommended that government takes some further actions to grant some extra benefits and advantages to people with mental health conditions to ensure that they are properly protected during the pandemic.
+
+The score drops for people who have and does not have a long-term health condition in 2020 is comparable for both sex (Figure 6). Considering that the COVID-19 pandemic is a global public health emergency, this level of drop is not very significant. This shows that Australians in general still have good trust in their own health and the healthcare system in 2020.
+
+In Figure 7, we discover an opposite trend comparing to what we have seen before. People with disability are less impacted by the pandemic comparing to those who are without. This may be because that the travel and gathering restrictions have make the people without disability less happy, while people with disability usually has lower activity level and therefore are impacted less by the restrictions. However, disabled people still have lower scores overall which means the government should still emphasize their wellbeing during the pandemic.
+
+Figure 8 also shows a drop in life satisfaction score in 2020 overall for people with different sexual orientation. But we find that non-heterosexual females are especially vulnerable in the pandemic as they face a mean score drop of $1.2$ point. The reason behind this finding is unable to infer only using our data, but their vulnerability is surely a concern in the society.
+
+```{r, echo=FALSE, warning=FALSE, fig.height=7.5, fig.fullwidth=TRUE, fig.cap="Mean Overall Life Satisfaction Scores by Year, Sex, and Age Group"}
+# Life satisfaction rates estimation by year, age group, and sex
+satisfac.est.2014 %>%
+  mutate(Males=as.double(Males)) %>%
+  pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>% # make the table tidy
+  mutate(Year=2014) %>% # record year
+  bind_rows(satisfac.est.2019 %>% mutate(Males=as.double(Males)) %>% # join other year tables
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2019)) %>%
+  bind_rows(satisfac.est.2020 %>% mutate(Males=as.double(Males)) %>%
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2020)) %>%
+  mutate(Year=as.factor(Year)) %>% 
+  ggplot(aes(x=Group, y=LS_Rate, fill=Group)) +
+  geom_bar(position='dodge', stat="identity") + # bar chart 
+  geom_text(aes(label=LS_Rate), position=position_dodge(width=0.9),
+            vjust=-0.25, size=3) + # configure bar labels
+  theme(axis.text.x=element_blank()) + # remove x-axis ticks
+  facet_wrap(vars(Sex, Year)) + # by year and sex
+  xlab("Group") + 
+  ylab("Life Satisfaction Rate")
+```
+
+```{r, echo=FALSE, warning=FALSE, fig.height=7.5, fig.fullwidth=TRUE, fig.cap="Relative Standard Error by Year, Sex, and Age Group"}
+# Extract relative SE data for table by age group.
+satisfac.se.2014 <- satisfac.se[3:7, 1:3]
+satisfac.se.2019 <- bind_cols(satisfac.se[3:7, 1], satisfac.se[3:7, 6:7])
+satisfac.se.2020 <- bind_cols(satisfac.se[3:7, 1], satisfac.se[3:7, 10:11])
+
+# SE of life satisfaction rates
+satisfac.se.2014 %>%
+  mutate(Males=as.double(Males)) %>%
+  pivot_longer(-Group, names_to="Sex", values_to="RSE") %>% # make the table tidy
+  mutate(Year=2014) %>% # record year
+  bind_rows(satisfac.se.2019 %>% mutate(Males=as.double(Males)) %>% # join other year tables
+              pivot_longer(-Group, names_to="Sex", values_to="RSE") %>%
+              mutate(Year=2019)) %>%
+  bind_rows(satisfac.se.2020 %>% mutate(Males=as.double(Males)) %>%
+              pivot_longer(-Group, names_to="Sex", values_to="RSE") %>%
+              mutate(Year=2020)) %>%
+  mutate(Year=as.factor(Year)) %>% 
+  ggplot(aes(x=Year, y=RSE, group=Sex, col=Sex)) +
+  geom_line() + # line chart
+  geom_point() + 
+  geom_text(aes(label=RSE), position=position_dodge(width=0.9),
+            vjust=-0.25, size=3) + # configure bar labels
+  facet_wrap(vars(Group)) + # by year and sex
+  xlab("Group") + 
+  ylab("Relative Error")
+```
+
+
+```{r, echo=FALSE, warning=FALSE, fig.height=7.5, fig.fullwidth=TRUE, fig.cap="Mean Overall Life Satisfaction Scores by Year, Sex, and Immigration Status"}
+# Life satisfaction rates estimation by year, immigrant status, and sex
+migrants.2014 %>%
+  mutate(Males=as.double(Males)) %>%
+  pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+  mutate(Year=2014) %>%
+  bind_rows(migrants.2019 %>% mutate(Males=as.double(Males)) %>% 
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2019)) %>%
+  bind_rows(migrants.2020 %>% mutate(Males=as.double(Males)) %>%
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2020)) %>%
+  mutate(Year=as.factor(Year)) %>% 
+  ggplot(aes(x=Group, y=LS_Rate, fill=Group)) +
+  geom_bar(position='dodge', stat="identity") + 
+  geom_text(aes(label=LS_Rate), position=position_dodge(width=0.9),
+            vjust=-0.25, size=3) + 
+  theme(axis.text.x=element_blank()) + 
+  facet_wrap(vars(Sex, Year)) + 
+  xlab("Group") + 
+  ylab("Life Satisfaction Rate")
+```
+
+```{r, echo=FALSE, warning=FALSE, fig.height=7.5, fig.fullwidth=TRUE, fig.cap="Mean Overall Life Satisfaction Scores by Year, Sex, and Mental Health Status"}
+# Life satisfaction rates estimation by year, mental health status, and sex
+mental.health.2014 %>%
+  mutate(Males=as.double(Males)) %>%
+  pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+  mutate(Year=2014) %>%
+  bind_rows(mental.health.2019 %>% mutate(Males=as.double(Males)) %>% 
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2019)) %>%
+  bind_rows(mental.health.2020 %>% mutate(Males=as.double(Males)) %>%
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2020)) %>%
+  mutate(Year=as.factor(Year)) %>% 
+  ggplot(aes(x=Group, y=LS_Rate, fill=Group)) +
+  geom_bar(position='dodge', stat="identity") + 
+  geom_text(aes(label=LS_Rate), position=position_dodge(width=0.9),
+            vjust=-0.25, size=3) + 
+  theme(axis.text.x=element_blank()) + 
+  facet_wrap(vars(Sex, Year)) + 
+  xlab("Group") + 
+  ylab("Life Satisfaction Rate")
+```
+
+```{r, echo=FALSE, warning=FALSE, fig.height=7.5, fig.fullwidth=TRUE, fig.cap="Mean Overall Life Satisfaction Scores by Year, Sex, and Long-Term Health Status"}
+# Life satisfaction rates estimation by year, long term health status, and sex
+lt.health.2014 %>%
+  mutate(Males=as.double(Males)) %>%
+  pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+  mutate(Year=2014) %>%
+  bind_rows(lt.health.2019 %>% mutate(Males=as.double(Males)) %>% 
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2019)) %>%
+  bind_rows(lt.health.2020 %>% mutate(Males=as.double(Males)) %>%
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2020)) %>%
+  mutate(Year=as.factor(Year)) %>% 
+  ggplot(aes(x=Group, y=LS_Rate, fill=Group)) +
+  geom_bar(position='dodge', stat="identity") + 
+  geom_text(aes(label=LS_Rate), position=position_dodge(width=0.9),
+            vjust=-0.25, size=3) + 
+  theme(axis.text.x=element_blank()) + 
+  facet_wrap(vars(Sex, Year)) + 
+  xlab("Group") + 
+  ylab("Life Satisfaction Rate")
+```
+
+```{r, echo=FALSE, warning=FALSE, fig.height=7.5, fig.fullwidth=TRUE, fig.cap="Mean Overall Life Satisfaction Scores by Year, Sex, and Disability Status"}
+# Life satisfaction rates estimation by year, long term health status, and sex
+disable.2014 %>%
+  mutate(Males=as.double(Males)) %>%
+  pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+  mutate(Year=2014) %>%
+  bind_rows(disable.2019 %>% mutate(Males=as.double(Males)) %>% 
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2019)) %>%
+  bind_rows(disable.2020 %>% mutate(Males=as.double(Males)) %>%
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2020)) %>%
+  mutate(Year=as.factor(Year)) %>% 
+  ggplot(aes(x=Group, y=LS_Rate, fill=Group)) +
+  geom_bar(position='dodge', stat="identity") + 
+  geom_text(aes(label=LS_Rate), position=position_dodge(width=0.9),
+            vjust=-0.25, size=3) + 
+  theme(axis.text.x=element_blank()) + 
+  facet_wrap(vars(Sex, Year)) + 
+  xlab("Group") + 
+  ylab("Life Satisfaction Rate")
+```
+
+```{r, echo=FALSE, warning=FALSE, fig.height=7.5, fig.fullwidth=TRUE, fig.cap="Mean Overall Life Satisfaction Scores by Year, Sex, and Sexual Orientation"}
+# Life satisfaction rates estimation by year, long term health status, and sex
+sex.orien.2014 %>%
+  mutate(Males=as.double(Males)) %>%
+  pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+  mutate(Year=2014) %>%
+  bind_rows(sex.orien.2019 %>% mutate(Males=as.double(Males)) %>% 
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2019)) %>%
+  bind_rows(sex.orien.2020 %>% mutate(Males=as.double(Males)) %>%
+              pivot_longer(-Group, names_to="Sex", values_to="LS_Rate") %>%
+              mutate(Year=2020)) %>%
+  mutate(Year=as.factor(Year)) %>% 
+  ggplot(aes(x=Group, y=LS_Rate, fill=Group)) +
+  geom_bar(position='dodge', stat="identity") + 
+  geom_text(aes(label=LS_Rate), position=position_dodge(width=0.9),
+            vjust=-0.25, size=3) + 
+  theme(axis.text.x=element_blank()) + 
+  facet_wrap(vars(Sex, Year)) + 
+  xlab("Group") + 
+  ylab("Life Satisfaction Rate")
+```
+
+\newpage
+
+# Discussion
+
+Overall, using the 2020 Australian General Social Survey estimate data, we find that on average, Australians rated their overall life satisfaction as $7.2$, which represents a $0.3$ point drop from the previous year. We discovered that the drop in overall life satisfaction score is consistent for all people with different groups. Even though there is not a single group of people benefits from the COVID-19 pandemic in terms of overall life satisfaction, the impacts of COVID-19 are not necessarily significant as people still have good faith in their health and in their communities. However, some groups do appear to be more resilient than other groups such as older people and people with disability. But in general, minority groups of people are more vulnerable to the pandemic environment such as non-heterosexual females and people with mental health condition.
+
+In this paper, we find that the data set with estimated means from the AGSS surely provide us some insights in the impacts of COVID-19 pandemic on Australians' overall life satisfaction, especially by people of different age groups and social and health status. However, there are still shortcoming in our analysis and the survey itself.
+
+First, the high non-response rate in the 2020 survey inevitable generates certain amount of non-response bias which can result in biased estimates of mean overall life satisfaction rate, and as a result, this sample may not be representative of the whole Australian population. Besides, enven though we compare the 2020 data with previous years, without an randomized experimental design we are unable to draw a conclusion on the causal effect between drops in the scores and the COVID-19 pandemic outbreaks, what we discover is just a strong correlation between these two events since the relative standard error is pretty small. 
+
+There are also possible future steps we can take to make this study more comprehensive. For examples, we can inspect the data from other modules of the survey to see why overall life satisfaction scores have dropped. We can do this by observing from the survey results that, whether people have less involvements in the community or have greater financial stress due to economic instability in 2020. Also, we can instead implement a follow-up survey that includes some questions directly asking the impacts of COVID-19 pandemic on peoples' daily lives. An example of such a supplementary survey is provided in the Appendix.
+
+\newpage
+
+# Appendix
+
+## Appendix 1: Supplementary Survey
+
+The complete survey can be found at: https://forms.gle/25pJ8N8NnLsTjaaP9
+
+\newpage
+
+# References
